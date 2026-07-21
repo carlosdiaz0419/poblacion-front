@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   BarChart, Bar, LineChart, Line, ComposedChart, Area,
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LabelList,
@@ -268,30 +268,36 @@ function App() {
   const [distribucionEdadComp, setDistribucionEdadComp] = useState({ a: null, b: null });
   const [narrativaEdadMedia, setNarrativaEdadMedia] = useState(""); 
   const [cargandoDistribucion, setCargandoDistribucion] = useState(false);
-  const [sugerenciasMunicipio, setSugerenciasMunicipio] = useState([]);
-  const [sugerenciasMunA, setSugerenciasMunA] = useState([]);
-  const [sugerenciasMunB, setSugerenciasMunB] = useState([]);
-  const debounceRefs = useRef({});
+  
+  // Estados para el catálogo de municipios agrupados por estado
+  const [estadosData, setEstadosData] = useState({});
+  const [estadoSeleccionado, setEstadoSeleccionado] = useState('');
+  const [municipiosLista, setMunicipiosLista] = useState([]);
+  const [cargandoUbicaciones, setCargandoUbicaciones] = useState(true);
 
-  const buscarMunicipiosApi = async (query) => {
-    if (!query || !query.trim()) return [];
-    try {
-      const res = await fetch(`${baseUrl}/api/municipios?q=${encodeURIComponent(query.trim())}`);
-      const json = await res.json();
-      return json.datos || json.municipios || [];
-    } catch (err) {
-      console.error('Error al buscar municipios', err);
-      return [];
-    }
-  };
+  // Cargar catálogo de estados y municipios al iniciar la aplicación
+  useEffect(() => {
+    fetch(`${baseUrl}/api/municipios`)
+      .then((res) => {
+        if (!res.ok) throw new Error('Error al conectar con el servidor');
+        return res.json();
+      })
+      .then((data) => {
+        setEstadosData(data);
+        setCargandoUbicaciones(false);
+      })
+      .catch((err) => {
+        console.error(err);
+        mostrarToast('No se pudieron cargar las ubicaciones');
+        setCargandoUbicaciones(false);
+      });
+  }, []);
 
-  const buscarSugerencias = (query, setSugerencias, key) => {
-    if (debounceRefs.current[key]) clearTimeout(debounceRefs.current[key]);
-    if (!query || !query.trim()) { setSugerencias([]); return; }
-    debounceRefs.current[key] = setTimeout(async () => {
-      const lista = await buscarMunicipiosApi(query);
-      setSugerencias(lista);
-    }, 250);
+  const handleEstadoChange = (e) => {
+    const estado = e.target.value;
+    setEstadoSeleccionado(estado);
+    setMunicipiosLista(estadosData[estado] || []);
+    setMunicipio(''); // Limpiar municipio al cambiar de estado
   };
 
   const generarAnalisisNarrativo = (datos) => {
@@ -397,19 +403,19 @@ function App() {
     finally { setCargando(false); }
   };
 
-const obtenerNarrativaEdadMedia = async () => {
-  setCargando(true);
-  try {
-    const json = await fetchPoblacion(municipio);
-    const total = json.datos?.poblacion_total || 0;
-    const valor = Math.round(total * 0.35); 
-    setNarrativaEdadMedia(`En ${municipio}, el grupo de edad media (30-55 años) representa aproximadamente ${valor.toLocaleString()} personas, un sector clave para el análisis demográfico actual.`);
-  } catch (err) {
-    setNarrativaEdadMedia("No se pudo obtener la información.");
-  } finally {
-    setCargando(false);
-  }
-};
+  const obtenerNarrativaEdadMedia = async () => {
+    setCargando(true);
+    try {
+      const json = await fetchPoblacion(municipio);
+      const total = json.datos?.poblacion_total || 0;
+      const valor = Math.round(total * 0.35); 
+      setNarrativaEdadMedia(`En ${municipio}, el grupo de edad media (30-55 años) representa aproximadamente ${valor.toLocaleString()} personas, un sector clave para el análisis demográfico actual.`);
+    } catch (err) {
+      setNarrativaEdadMedia("No se pudo obtener la información.");
+    } finally {
+      setCargando(false);
+    }
+  };
 
   const compararPoblacion = async (e) => {
     e.preventDefault();
@@ -770,7 +776,7 @@ const obtenerNarrativaEdadMedia = async () => {
         {isDarkMode ? '☀️' : '🌙'}
       </button>
       <div style={styles.card}>
-        {(cargando || cargandoTendencia || cargandoTendenciaComp || cargandoDistribucion) && <div className="progress-bar" />}
+        {(cargando || cargandoTendencia || cargandoTendenciaComp || cargandoDistribucion || cargandoUbicaciones) && <div className="progress-bar" />}
         <button
           className="interactive-btn"
           style={styles.navButton}
@@ -791,20 +797,44 @@ const obtenerNarrativaEdadMedia = async () => {
         {vista === 'consulta' ? (
           <form key="consulta" className="vista-transition" onSubmit={consultarPoblacion}>
             <h2 style={styles.title}>Estimaciones Demográficas</h2>
+            
+            {/* Selector de Estado */}
             <div className="campo-glow">
-              <label className="label-glow" style={styles.label}>Municipio</label>
-              <input
+              <label className="label-glow" style={styles.label}>Estado</label>
+              <select
                 className="interactive-input"
                 style={styles.input}
-                value={municipio}
-                onChange={(e) => { setMunicipio(e.target.value); buscarSugerencias(e.target.value, setSugerenciasMunicipio, 'municipio'); }}
-                placeholder="Escribe para buscar..."
-                list="lista-mun"
-              />
-              <datalist id="lista-mun">
-                {sugerenciasMunicipio.map((m) => <option key={m} value={m} />)}
-              </datalist>
+                value={estadoSeleccionado}
+                onChange={handleEstadoChange}
+              >
+                <option value="">-- Selecciona un estado --</option>
+                {Object.keys(estadosData).map((est) => (
+                  <option key={est} value={est}>
+                    {est}
+                  </option>
+                ))}
+              </select>
             </div>
+
+            {/* Selector de Municipio */}
+            <div className="campo-glow">
+              <label className="label-glow" style={styles.label}>Municipio</label>
+              <select
+                className="interactive-input"
+                style={{ ...styles.input, opacity: !estadoSeleccionado ? 0.7 : 1 }}
+                value={municipio}
+                onChange={(e) => setMunicipio(e.target.value)}
+                disabled={!estadoSeleccionado}
+              >
+                <option value="">-- Selecciona un municipio --</option>
+                {municipiosLista.map((munItem, idx) => (
+                  <option key={idx} value={munItem}>
+                    {munItem}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <div className="campo-glow">
               <label className="label-glow" style={styles.label}>Año</label>
               <input className="interactive-input" style={styles.input} type="number" value={ano} onChange={(e) => setAno(e.target.value)} />
@@ -949,11 +979,9 @@ const obtenerNarrativaEdadMedia = async () => {
                   className="interactive-input"
                   style={styles.input}
                   value={munA}
-                  onChange={(e) => { setMunA(e.target.value); buscarSugerencias(e.target.value, setSugerenciasMunA, 'munA'); }}
-                  placeholder="Escribe para buscar..."
-                  list="lista-mun-a"
+                  onChange={(e) => setMunA(e.target.value)}
+                  placeholder="Escribe municipio A..."
                 />
-                <datalist id="lista-mun-a">{sugerenciasMunA.map((m) => <option key={m} value={m} />)}</datalist>
               </div>
               <button
                 type="button"
@@ -970,11 +998,9 @@ const obtenerNarrativaEdadMedia = async () => {
                   className="interactive-input"
                   style={styles.input}
                   value={munB}
-                  onChange={(e) => { setMunB(e.target.value); buscarSugerencias(e.target.value, setSugerenciasMunB, 'munB'); }}
-                  placeholder="Escribe para buscar..."
-                  list="lista-mun-b"
+                  onChange={(e) => setMunB(e.target.value)}
+                  placeholder="Escribe municipio B..."
                 />
-                <datalist id="lista-mun-b">{sugerenciasMunB.map((m) => <option key={m} value={m} />)}</datalist>
               </div>
             </div>
             <div className="campo-glow">
