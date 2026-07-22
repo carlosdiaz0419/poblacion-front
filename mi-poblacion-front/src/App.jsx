@@ -6,7 +6,7 @@ import {
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
-const baseUrl = 'http://localhost:8000';
+const baseUrl = 'https://backend-production-1a3af.up.railway.app';
 
 const PALETTE = {
   wine:      '#741b2a',
