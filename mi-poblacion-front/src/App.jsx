@@ -6,7 +6,7 @@ import {
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
-const baseUrl = 'https://backend-production-1a3af.up.railway.app';
+const baseUrl = 'http://localhost:8000';
 
 const PALETTE = {
   wine:      '#741b2a',
@@ -242,8 +242,17 @@ function App() {
   const capturaRef = useRef(null);
 
   const [municipio, setMunicipio] = useState('Tuxtla Gutiérrez');
-  const [munA, setMunA] = useState('Tuxtla Gutiérrez');
-  const [munB, setMunB] = useState('Ocosingo');
+  
+  // Estados para comparación A
+  const [estadoA, setEstadoA] = useState('');
+  const [municipiosListaA, setMunicipiosListaA] = useState([]);
+  const [munA, setMunA] = useState('');
+
+  // Estados para comparación B
+  const [estadoB, setEstadoB] = useState('');
+  const [municipiosListaB, setMunicipiosListaB] = useState([]);
+  const [munB, setMunB] = useState('');
+
   const [nombresCongelados, setNombresCongelados] = useState({ a: 'Tuxtla Gutiérrez', b: 'Ocosingo' });
   const [ano, setAno] = useState(2026);
   const [sexo, setSexo] = useState('AMBOS');
@@ -298,6 +307,20 @@ function App() {
     setEstadoSeleccionado(estado);
     setMunicipiosLista(estadosData[estado] || []);
     setMunicipio(''); // Limpiar municipio al cambiar de estado
+  };
+
+  const handleEstadoAChange = (e) => {
+    const estado = e.target.value;
+    setEstadoA(estado);
+    setMunicipiosListaA(estadosData[estado] || []);
+    setMunA('');
+  };
+
+  const handleEstadoBChange = (e) => {
+    const estado = e.target.value;
+    setEstadoB(estado);
+    setMunicipiosListaB(estadosData[estado] || []);
+    setMunB('');
   };
 
   const generarAnalisisNarrativo = (datos) => {
@@ -430,8 +453,17 @@ function App() {
   };
 
   const intercambiarMunicipios = () => {
+    const tempMunA = munA;
     setMunA(munB);
-    setMunB(munA);
+    setMunB(tempMunA);
+
+    const tempEstadoA = estadoA;
+    setEstadoA(estadoB);
+    setEstadoB(tempEstadoA);
+
+    const tempListaA = municipiosListaA;
+    setMunicipiosListaA(municipiosListaB);
+    setMunicipiosListaB(tempListaA);
   };
 
   const fetchPoblacionAnio = async (mun, anioParam) => {
@@ -972,17 +1004,40 @@ function App() {
         ) : (
           <form key="comparar" className="vista-transition" onSubmit={compararPoblacion}>
             <h2 style={styles.title}> Analisis Comparativo</h2>
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-              <div className="campo-glow" style={{ flex: 1 }}>
-                <label className="label-glow" style={styles.label}>Municipio A</label>
-                <input
-                  className="interactive-input"
-                  style={styles.input}
-                  value={munA}
-                  onChange={(e) => setMunA(e.target.value)}
-                  placeholder="Escribe municipio A..."
-                />
+            
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <div style={{ flex: 1 }}>
+                <div className="campo-glow">
+                  <label className="label-glow" style={styles.label}>Estado A</label>
+                  <select
+                    className="interactive-input"
+                    style={styles.input}
+                    value={estadoA}
+                    onChange={handleEstadoAChange}
+                  >
+                    <option value="">-- Selecciona estado --</option>
+                    {Object.keys(estadosData).map((est) => (
+                      <option key={est} value={est}>{est}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="campo-glow">
+                  <label className="label-glow" style={styles.label}>Municipio A</label>
+                  <select
+                    className="interactive-input"
+                    style={{ ...styles.input, opacity: !estadoA ? 0.7 : 1 }}
+                    value={munA}
+                    onChange={(e) => setMunA(e.target.value)}
+                    disabled={!estadoA}
+                  >
+                    <option value="">-- Selecciona municipio --</option>
+                    {municipiosListaA.map((munItem, idx) => (
+                      <option key={idx} value={munItem}>{munItem}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
+              
               <button
                 type="button"
                 className="swap-btn"
@@ -992,17 +1047,40 @@ function App() {
               >
                 ⇄
               </button>
-              <div className="campo-glow" style={{ flex: 1 }}>
-                <label className="label-glow" style={styles.label}>Municipio B</label>
-                <input
-                  className="interactive-input"
-                  style={styles.input}
-                  value={munB}
-                  onChange={(e) => setMunB(e.target.value)}
-                  placeholder="Escribe municipio B..."
-                />
+              
+              <div style={{ flex: 1 }}>
+                <div className="campo-glow">
+                  <label className="label-glow" style={styles.label}>Estado B</label>
+                  <select
+                    className="interactive-input"
+                    style={styles.input}
+                    value={estadoB}
+                    onChange={handleEstadoBChange}
+                  >
+                    <option value="">-- Selecciona estado --</option>
+                    {Object.keys(estadosData).map((est) => (
+                      <option key={est} value={est}>{est}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="campo-glow">
+                  <label className="label-glow" style={styles.label}>Municipio B</label>
+                  <select
+                    className="interactive-input"
+                    style={{ ...styles.input, opacity: !estadoB ? 0.7 : 1 }}
+                    value={munB}
+                    onChange={(e) => setMunB(e.target.value)}
+                    disabled={!estadoB}
+                  >
+                    <option value="">-- Selecciona municipio --</option>
+                    {municipiosListaB.map((munItem, idx) => (
+                      <option key={idx} value={munItem}>{munItem}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
+
             <div className="campo-glow">
               <label className="label-glow" style={styles.label}>Año</label>
               <input className="interactive-input" style={styles.input} type="number" value={ano} onChange={(e) => setAno(e.target.value)} />
