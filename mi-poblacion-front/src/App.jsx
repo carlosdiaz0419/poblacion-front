@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   BarChart, Bar, LineChart, Line, ComposedChart, Area,
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LabelList,
-  PieChart, Pie, Cell, Legend
 } from 'recharts';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -149,11 +148,13 @@ const getStyles = (isDarkMode) => ({
     fontSize: '12px',
     transition: 'all 0.3s',
   },
-  graficaButton: {
+ graficaButton: {
     marginTop: '15px',
     padding: '12px 20px',
     backgroundColor: isDarkMode ? '#3a2f45' : '#e6b459',
+    
     color: '#ffffff',
+    
     border: isDarkMode ? `1px solid ${PALETTE.gold}33` : `1px solid ${PALETTE.wine}22`,
     borderRadius: '12px',
     fontWeight: 'bold',
@@ -239,9 +240,6 @@ function App() {
   const [cargando, setCargando] = useState(false);
   const [mostrarGrafica, setMostrarGrafica] = useState(false);
   const capturaRef = useRef(null);
-
-  // NUEVO ESTADO PARA ALTERNAR GRÁFICA DE PERFIL (PIRÁMIDE VS PASTEL)
-  const [vistaPerfil, setVistaPerfil] = useState('piramide');
 
   const [municipio, setMunicipio] = useState('Tuxtla Gutiérrez');
   
@@ -809,7 +807,6 @@ function App() {
       <button className="interactive-btn theme-toggle" style={styles.themeButton} onClick={() => setIsDarkMode(!isDarkMode)}>
         {isDarkMode ? '☀️' : '🌙'}
       </button>
-      
       <div style={styles.card}>
         {(cargando || cargandoTendencia || cargandoTendenciaComp || cargandoDistribucion || cargandoUbicaciones) && <div className="progress-bar" />}
         <button
@@ -827,264 +824,404 @@ function App() {
             setDistribucionEdadComp({ a: null, b: null });
           }}
         >
-          {vista === 'consulta' ? 'Cambiar a Análisis' : 'Cambiar a Estimaciones'}
+          {vista === 'consulta' ? 'Cambiar a Analisis' : 'Cambiar a Estimaciones'}
         </button>
-
-        {/* ============================================== */}
-        {/* INICIO DE LA SECCIÓN RECONSTRUIDA DE LA VISTA  */}
-        {/* ============================================== */}
         {vista === 'consulta' ? (
-          <div className="vista-transition" ref={capturaRef}>
-            <div style={styles.title}>Estimaciones de Población</div>
-            <form onSubmit={consultarPoblacion}>
-              <div className="campo-glow">
-                <label style={styles.label}>Estado</label>
-                <select className="interactive-input" style={styles.input} value={estadoSeleccionado} onChange={handleEstadoChange}>
-                  <option value="">Seleccione un estado</option>
-                  {Object.keys(estadosData).map(estado => (
-                    <option key={estado} value={estado}>{estado}</option>
-                  ))}
-                </select>
-              </div>
+          <form key="consulta" className="vista-transition" onSubmit={consultarPoblacion}>
+            <h2 style={styles.title}>Estimaciones Demográficas</h2>
+            
+            {/* Selector de Estado */}
+            <div className="campo-glow">
+              <label className="label-glow" style={styles.label}>Estado</label>
+              <select
+                className="interactive-input"
+                style={styles.input}
+                value={estadoSeleccionado}
+                onChange={handleEstadoChange}
+              >
+                <option value="">-- Selecciona un estado --</option>
+                {Object.keys(estadosData).map((est) => (
+                  <option key={est} value={est}>
+                    {est}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-              <div className="campo-glow">
-                <label style={styles.label}>Municipio</label>
-                <select className="interactive-input" style={styles.input} value={municipio} onChange={(e) => setMunicipio(e.target.value)} required>
-                  <option value="">Seleccione un municipio</option>
-                  {municipiosLista.map(mun => (
-                    <option key={mun} value={mun}>{mun}</option>
-                  ))}
-                </select>
-              </div>
-              
-              <div style={{ display: 'flex', gap: '15px' }}>
-                <div className="campo-glow" style={{ flex: 1 }}>
-                  <label style={styles.label}>Año</label>
-                  <input type="number" className="interactive-input" style={styles.input} value={ano} onChange={(e) => setAno(e.target.value)} required />
-                </div>
-                <div className="campo-glow" style={{ flex: 1 }}>
-                  <label style={styles.label}>Sexo</label>
-                  <select className="interactive-input" style={styles.input} value={sexo} onChange={(e) => setSexo(e.target.value)}>
-                    <option value="AMBOS">Ambos</option>
-                    <option value="Hombres">Hombres</option>
-                    <option value="Mujeres">Mujeres</option>
-                  </select>
-                </div>
-              </div>
-              
-              <button type="submit" className="interactive-btn" style={styles.button(cargando, isDarkMode)} disabled={cargando || !municipio}>
-                <span className="btn-content">
-                  {cargando && <span className="spinner"></span>}
-                  Consultar Población
-                </span>
-              </button>
-            </form>
+            {/* Selector de Municipio */}
+            <div className="campo-glow">
+              <label className="label-glow" style={styles.label}>Municipio</label>
+              <select
+                className="interactive-input"
+                style={{ ...styles.input, opacity: !estadoSeleccionado ? 0.7 : 1 }}
+                value={municipio}
+                onChange={(e) => setMunicipio(e.target.value)}
+                disabled={!estadoSeleccionado}
+              >
+                <option value="">-- Selecciona un municipio --</option>
+                {municipiosLista.map((munItem, idx) => (
+                  <option key={idx} value={munItem}>
+                    {munItem}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-            {resultado !== null && (
-              <div className="result-enter">
-                <div className="resultado-glow" style={styles.resultadoCard}>
-                  <p style={{ margin: '0 0 5px 0', fontSize: '14px', opacity: 0.8 }}>Población Total ({ano})</p>
-                  <h3 style={{ margin: 0, fontSize: '32px', color: isDarkMode ? PALETTE.goldSoft : PALETTE.wine }}>
-                    {resultado.toLocaleString()}
-                  </h3>
+            <div className="campo-glow">
+              <label className="label-glow" style={styles.label}>Año</label>
+              <input className="interactive-input" style={styles.input} type="number" value={ano} onChange={(e) => setAno(e.target.value)} />
+            </div>
+            <div className="campo-glow">
+              <label className="label-glow" style={styles.label}>Género</label>
+              <select className="interactive-input" style={styles.input} value={sexo} onChange={(e) => setSexo(e.target.value)}>
+                <option value="AMBOS">Ambos</option><option value="HOMBRES">Hombres</option><option value="MUJERES">Mujeres</option>
+              </select>
+            </div>
+            <button className="interactive-btn" type="submit" style={styles.button(cargando, isDarkMode)} disabled={cargando}>
+              <span className="btn-content">
+                {cargando && <span className="spinner" />}
+                {cargando ? 'Consultando...' : 'Generar Estimación'}
+              </span>
+            </button>
+            
+<button 
+  type="button" 
+  className="interactive-btn" 
+  style={{...styles.button(cargando, isDarkMode), marginTop: '10px', background: PALETTE.gold}} 
+  onClick={obtenerNarrativaEdadMedia} 
+  disabled={cargando}
+>
+  {cargando ? 'Consultando...' : 'Consultar Edad Media'}
+</button>
+
+{narrativaEdadMedia && (
+  <div className="result-enter" style={styles.narrativeBox}>
+    {narrativaEdadMedia}
+  </div>
+)}
+            {resultado !== null && <div className="resultado-glow" style={styles.resultadoCard}><b>{resultado.toLocaleString()}</b> habitantes</div>}
+            <hr style={{margin: '25px 0', border: '0', borderTop: isDarkMode ? '1px solid #3c3245' : '1px solid #e8d8db'}} />
+            <h3 style={styles.title}>Perfil Demográfico</h3>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <div className="campo-glow" style={{flex: 1}}><label className="label-glow" style={styles.label}>Periodo Inicio</label><input className="interactive-input" style={styles.input} type="number" value={rangoInicio} onChange={(e) => setRangoInicio(e.target.value)} /></div>
+              <div className="campo-glow" style={{flex: 1}}><label className="label-glow" style={styles.label}>Periodo Fin</label><input className="interactive-input" style={styles.input} type="number" value={rangoFin} onChange={(e) => setRangoFin(e.target.value)} /></div>
+            </div>
+            <button className="interactive-btn" type="button" style={styles.button(cargando, isDarkMode)} onClick={alternarPerfil} disabled={cargando}>
+              <span className="btn-content">
+                {cargando && <span className="spinner" />}
+                {cargando ? 'Generando...' : datosPiramide ? (mostrarPerfil ? 'Ocultar Perfil Demográfico' : 'Mostrar Perfil Demográfico') : 'Generar Perfil'}
+              </span>
+            </button>
+            <button
+              className="interactive-btn"
+              type="button"
+              style={{ ...styles.graficaButton, marginTop: '18px' }}
+              onClick={() => setMostrarTendencia((prev) => !prev)}
+            >
+              {mostrarTendencia ? 'Ocultar Tendencia' : 'Ver Tendencia'}
+            </button>
+            {mostrarTendencia && (
+              <div className="result-enter" style={{ marginTop: '16px', textAlign: 'left' }}>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <div className="campo-glow" style={{ flex: 1 }}>
+                    <label className="label-glow" style={styles.label}>Periodo Inicio</label>
+                    <input className="interactive-input" style={styles.input} type="number" value={rangoInicioTendencia} onChange={(e) => setRangoInicioTendencia(e.target.value)} />
+                  </div>
+                  <div className="campo-glow" style={{ flex: 1 }}>
+                    <label className="label-glow" style={styles.label}>Periodo Fin</label>
+                    <input className="interactive-input" style={styles.input} type="number" value={rangoFinTendencia} onChange={(e) => setRangoFinTendencia(e.target.value)} />
+                  </div>
                 </div>
-                
-                <button 
-                  className="interactive-btn no-capturar" 
-                  type="button" 
-                  style={styles.graficaButton} 
-                  onClick={alternarPerfil}
-                >
-                  {mostrarPerfil ? 'Ocultar Perfil Demográfico' : 'Ver Perfil Demográfico'}
+                <button className="interactive-btn" type="button" style={styles.button(cargandoTendencia, isDarkMode)} onClick={consultarTendencia} disabled={cargandoTendencia}>
+                  <span className="btn-content">
+                    {cargandoTendencia && <span className="spinner" />}
+                    {cargandoTendencia ? 'Calculando tendencia...' : `Generar Tendencia (${rangoInicioTendencia}–${rangoFinTendencia})`}
+                  </span>
                 </button>
-                
-                {mostrarPerfil && (
-                  <div style={styles.proCard} className="result-enter">
-                    <div style={{display: 'flex', gap: '10px', marginBottom: '15px'}} className="no-capturar">
-                      <div style={{flex: 1}}>
-                        <label style={{...styles.label, fontSize: '10px'}}>Inicio</label>
-                        <input type="number" className="interactive-input" style={{...styles.input, padding: '8px'}} value={rangoInicio} onChange={(e) => setRangoInicio(e.target.value)} />
-                      </div>
-                      <div style={{flex: 1}}>
-                        <label style={{...styles.label, fontSize: '10px'}}>Fin</label>
-                        <input type="number" className="interactive-input" style={{...styles.input, padding: '8px'}} value={rangoFin} onChange={(e) => setRangoFin(e.target.value)} />
-                      </div>
-                      <button className="interactive-btn" type="button" style={{...styles.graficaButton, marginTop: '20px', flex: 1}} onClick={consultarPiramide}>
-                        Actualizar
-                      </button>
+                {datosTendencia && (
+                  <div className="result-enter" style={styles.proCard}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                      <span style={{ fontSize: '13px', fontWeight: 800, color: isDarkMode ? PALETTE.goldSoft : PALETTE.wine, letterSpacing: '0.2px' }}>Tendencia Poblacional</span>
+                      <span style={styles.legendChip(PALETTE.wine, isDarkMode)}>● {municipio}</span>
                     </div>
-
-                    {datosPiramide && (
-                      <>
-                        <h4 style={{ color: isDarkMode ? '#fff' : '#000', marginBottom: '15px' }}>
-                          Perfil Demográfico ({rangoInicio} - {rangoFin})
-                        </h4>
-
-                        {/* EL BOTÓN PARA ALTERNAR GRÁFICAS */}
-                        <button 
-                          className="interactive-btn no-capturar" 
-                          type="button" 
-                          style={{ ...styles.exportButtonPdf, marginBottom: '15px' }} 
-                          onClick={() => setVistaPerfil(vistaPerfil === 'piramide' ? 'pastel' : 'piramide')}
-                        >
-                          {vistaPerfil === 'piramide' ? 'Ver Gráfica de Pastel (Total Hombres vs Mujeres)' : 'Ver Pirámide Demográfica'}
-                        </button>
-
-                        {/* RENDERIZADO CONDICIONAL DE LA GRÁFICA */}
-                        <div style={{ height: '300px' }}>
-                          {vistaPerfil === 'piramide' ? (
-                            <ResponsiveContainer width="100%" height="100%">
-                              {/* Aquí usamos [...datosPiramide].reverse() para invertir el orden de 0-4 a 85+ */}
-                              <BarChart layout="vertical" data={[...datosPiramide].reverse()} margin={{top: 5, right: 30, left: 20, bottom: 5}}>
-                                <XAxis type="number" tickFormatter={(val) => Math.abs(val)} stroke={isDarkMode ? '#fff' : '#000'} />
-                                <YAxis dataKey="edad" type="category" stroke={isDarkMode ? '#fff' : '#000'} />
-                                <Tooltip formatter={(val) => Math.abs(val)} contentStyle={{backgroundColor: isDarkMode ? '#333' : '#fff'}} />
-                                <Bar dataKey="hombres" fill={PALETTE.wine} name="Hombres" />
-                                <Bar dataKey="mujeres" fill={PALETTE.gold} name="Mujeres" />
-                              </BarChart>
-                            </ResponsiveContainer>
-                          ) : (
-                            <ResponsiveContainer width="100%" height="100%">
-                              <PieChart>
-                                <Pie
-                                  data={[
-                                    { name: 'Hombres', value: datosPiramide.reduce((acc, d) => acc + Math.abs(d.hombres || 0), 0), color: PALETTE.wine },
-                                    { name: 'Mujeres', value: datosPiramide.reduce((acc, d) => acc + Math.abs(d.mujeres || 0), 0), color: PALETTE.gold }
-                                  ]}
-                                  dataKey="value"
-                                  nameKey="name"
-                                  cx="50%"
-                                  cy="50%"
-                                  outerRadius={100}
-                                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(1)}%`}
-                                >
-                                  {
-                                    [
-                                      { color: PALETTE.wine },
-                                      { color: PALETTE.gold }
-                                    ].map((entry, index) => (
-                                      <Cell key={`cell-${index}`} fill={entry.color} />
-                                    ))
-                                  }
-                                </Pie>
-                                <Tooltip formatter={(value) => value.toLocaleString()} />
-                                <Legend />
-                              </PieChart>
-                            </ResponsiveContainer>
-                          )}
-                        </div>
-                      </>
-                    )}
+                    <div style={{ height: '240px', width: '100%' }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <ComposedChart data={datosTendencia} margin={{ top: 10, right: 25, left: 0, bottom: 5 }}>
+                          <defs>
+                            <linearGradient id="gradTendenciaSolo" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor={PALETTE.wine} stopOpacity={0.35} />
+                              <stop offset="95%" stopColor={PALETTE.wine} stopOpacity={0} />
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? '#3c3245' : '#eee'} />
+                          <XAxis dataKey="ano" stroke={isDarkMode ? '#fff' : '#000'} tick={{ fontSize: 12 }} />
+                          <YAxis stroke={isDarkMode ? '#fff' : '#000'} tickFormatter={formatCompacto} width={48} tick={{ fontSize: 12 }} domain={['auto', 'auto']} />
+                          <Tooltip formatter={(v) => v.toLocaleString()} contentStyle={{ backgroundColor: isDarkMode ? '#333' : '#fff', borderRadius: '8px' }} />
+                          <Area type="monotone" dataKey="poblacion" stroke="none" fill="url(#gradTendenciaSolo)" />
+                          <Line type="monotone" dataKey="poblacion" name={municipio} stroke={PALETTE.wine} strokeWidth={3} dot={{ r: 4, fill: PALETTE.gold }} activeDot={{ r: 6 }} />
+                        </ComposedChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div style={styles.narrativeBox}>
+                      <h4 style={{ margin: '0 0 8px 0', color: isDarkMode ? PALETTE.goldSoft : PALETTE.wine }}></h4>
+                      {generarAnalisisTendencia(datosTendencia, municipio)}
+                    </div>
                   </div>
                 )}
-
-                <button 
-                  className="interactive-btn no-capturar" 
-                  type="button" 
-                  style={{ ...styles.exportButtonPdf, marginTop: '15px' }} 
-                  onClick={exportarPDF}
-                >
-                  Exportar a PDF
-                </button>
               </div>
             )}
-          </div>
-        ) : (
-          <div className="vista-transition" ref={capturaRef}>
-            <div style={styles.title}>Análisis Comparativo</div>
-            <form onSubmit={compararPoblacion}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                <div className="campo-glow">
-                  <label style={styles.label}>Estado A</label>
-                  <select className="interactive-input" style={styles.input} value={estadoA} onChange={handleEstadoAChange}>
-                    <option value="">Seleccione un estado</option>
-                    {Object.keys(estadosData).map(estado => (
-                      <option key={estado} value={estado}>{estado}</option>
-                    ))}
-                  </select>
-                  <label style={styles.label}>Municipio A</label>
-                  <select className="interactive-input" style={styles.input} value={munA} onChange={(e) => setMunA(e.target.value)}>
-                    <option value="">Seleccione municipio A</option>
-                    {municipiosListaA.map(mun => (
-                      <option key={mun} value={mun}>{mun}</option>
-                    ))}
-                  </select>
+            {datosPiramide && mostrarPerfil && (
+              <div ref={capturaRef} style={{ marginTop: '20px', padding: '15px', backgroundColor: isDarkMode ? '#26202f' : '#fdf9f6', borderRadius: '15px' }}>
+                <h3 style={{ color: isDarkMode ? PALETTE.goldSoft : PALETTE.wine, margin: '0 0 15px 0' }}>Perfil Demográfico</h3>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginBottom: '10px' }}>
+                  <span style={{ color: PALETTE.wine, fontWeight: 'bold' }}>● Hombres</span>
+                  <span style={{ color: PALETTE.gold, fontWeight: 'bold' }}>● Mujeres</span>
                 </div>
-                
-                <button type="button" className="interactive-btn swap-btn" style={styles.swapButton} onClick={intercambiarMunicipios} title="Invertir Municipios">
-                  ⇅
-                </button>
-                
-                <div className="campo-glow">
-                  <label style={styles.label}>Estado B</label>
-                  <select className="interactive-input" style={styles.input} value={estadoB} onChange={handleEstadoBChange}>
-                    <option value="">Seleccione un estado</option>
-                    {Object.keys(estadosData).map(estado => (
-                      <option key={estado} value={estado}>{estado}</option>
-                    ))}
-                  </select>
-                  <label style={styles.label}>Municipio B</label>
-                  <select className="interactive-input" style={styles.input} value={munB} onChange={(e) => setMunB(e.target.value)}>
-                    <option value="">Seleccione municipio B</option>
-                    {municipiosListaB.map(mun => (
-                      <option key={mun} value={mun}>{mun}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              
-              <div className="campo-glow" style={{ marginTop: '15px' }}>
-                <label style={styles.label}>Año a Comparar</label>
-                <input type="number" className="interactive-input" style={styles.input} value={ano} onChange={(e) => setAno(e.target.value)} required />
-              </div>
-              
-              <button type="submit" className="interactive-btn" style={styles.button(cargando, isDarkMode)} disabled={cargando || !munA || !munB}>
-                <span className="btn-content">
-                  {cargando && <span className="spinner"></span>}
-                  Comparar Población
-                </span>
-              </button>
-            </form>
-
-            {resultados.a !== null && resultados.b !== null && (
-              <div className="result-enter" style={{ marginTop: '20px' }}>
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <div className="resultado-glow" style={{ ...styles.resultadoCard, flex: 1 }}>
-                    <p style={{ margin: '0 0 5px 0', fontSize: '12px', fontWeight: 'bold' }}>{nombresCongelados.a}</p>
-                    <h3 style={{ margin: 0, fontSize: '24px', color: PALETTE.wine }}>{resultados.a.toLocaleString()}</h3>
-                  </div>
-                  <div className="resultado-glow" style={{ ...styles.resultadoCard, flex: 1 }}>
-                    <p style={{ margin: '0 0 5px 0', fontSize: '12px', fontWeight: 'bold' }}>{nombresCongelados.b}</p>
-                    <h3 style={{ margin: 0, fontSize: '24px', color: PALETTE.gold }}>{resultados.b.toLocaleString()}</h3>
-                  </div>
-                </div>
-
-                <div style={{ height: '250px', marginTop: '20px' }}>
+                <div style={{ height: '300px' }}>
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={[
-                      { name: nombresCongelados.a, value: resultados.a, fill: PALETTE.wine },
-                      { name: nombresCongelados.b, value: resultados.b, fill: PALETTE.gold }
-                    ]}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDarkMode ? '#444' : '#eee'} />
-                      <XAxis dataKey="name" stroke={isDarkMode ? '#fff' : '#000'} />
-                      <YAxis tickFormatter={formatCompacto} stroke={isDarkMode ? '#fff' : '#000'} />
-                      <Tooltip content={<ComparativaTooltip />} cursor={{ fill: isDarkMode ? '#333' : '#f5f5f5' }} />
-                      <Bar dataKey="value" radius={[8, 8, 0, 0]}>
-                        {
-                          [
-                            { fill: PALETTE.wine },
-                            { fill: PALETTE.gold }
-                          ].map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.fill} />
-                          ))
-                        }
-                      </Bar>
+                    <BarChart layout="vertical" data={datosPiramide} margin={{top: 5, right: 30, left: 20, bottom: 5}}>
+                      <XAxis type="number" tickFormatter={(val) => Math.abs(val)} stroke={isDarkMode ? '#fff' : '#000'} />
+                      <YAxis dataKey="edad" type="category" stroke={isDarkMode ? '#fff' : '#000'} />
+                      <Tooltip formatter={(val) => Math.abs(val)} contentStyle={{backgroundColor: isDarkMode ? '#333' : '#fff'}} />
+                      <Bar dataKey="hombres" fill={PALETTE.wine} name="Hombres" />
+                      <Bar dataKey="mujeres" fill={PALETTE.gold} name="Mujeres" />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
+                <div style={{ marginTop: '16px', padding: '14px', backgroundColor: isDarkMode ? '#1f1a25' : '#ffffff', borderRadius: '12px' }}>
+                  <h4 style={{ margin: '0 0 12px 0', fontSize: '13px', color: isDarkMode ? PALETTE.goldSoft : PALETTE.wine, textAlign: 'left' }}>Distribución por edad</h4>
+                  {renderDistribucionEdad(datosPiramide, PALETTE.wine)}
+                </div>
+                <div style={{ marginTop: '20px', padding: '15px', border: '1px dashed #c9a15a', borderRadius: '10px', fontSize: '14px', textAlign: 'justify' }}>
+                  <h4 style={{ margin: '0 0 10px 0', color: isDarkMode ? PALETTE.goldSoft : PALETTE.wine }}></h4>
+                  {generarAnalisisNarrativo(datosPiramide)}
+                </div>
+                <button className="interactive-btn no-capturar" type="button" style={styles.exportButton} onClick={exportarImagen}>Descargar Perfil (PNG)</button>
+                <button className="interactive-btn no-capturar" type="button" style={styles.exportButtonPdf} onClick={exportarPDF}>Descargar Perfil (PDF)</button>
               </div>
             )}
-          </div>
+          </form>
+        ) : (
+          <form key="comparar" className="vista-transition" onSubmit={compararPoblacion}>
+            <h2 style={styles.title}> Analisis Comparativo</h2>
+            
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <div style={{ flex: 1 }}>
+                <div className="campo-glow">
+                  <label className="label-glow" style={styles.label}>Estado A</label>
+                  <select
+                    className="interactive-input"
+                    style={styles.input}
+                    value={estadoA}
+                    onChange={handleEstadoAChange}
+                  >
+                    <option value="">-- Selecciona estado --</option>
+                    {Object.keys(estadosData).map((est) => (
+                      <option key={est} value={est}>{est}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="campo-glow">
+                  <label className="label-glow" style={styles.label}>Municipio A</label>
+                  <select
+                    className="interactive-input"
+                    style={{ ...styles.input, opacity: !estadoA ? 0.7 : 1 }}
+                    value={munA}
+                    onChange={(e) => setMunA(e.target.value)}
+                    disabled={!estadoA}
+                  >
+                    <option value="">-- Selecciona municipio --</option>
+                    {municipiosListaA.map((munItem, idx) => (
+                      <option key={idx} value={munItem}>{munItem}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              
+              <button
+                type="button"
+                className="swap-btn"
+                style={styles.swapButton}
+                onClick={intercambiarMunicipios}
+                title="Intercambiar municipios"
+              >
+                ⇄
+              </button>
+              
+              <div style={{ flex: 1 }}>
+                <div className="campo-glow">
+                  <label className="label-glow" style={styles.label}>Estado B</label>
+                  <select
+                    className="interactive-input"
+                    style={styles.input}
+                    value={estadoB}
+                    onChange={handleEstadoBChange}
+                  >
+                    <option value="">-- Selecciona estado --</option>
+                    {Object.keys(estadosData).map((est) => (
+                      <option key={est} value={est}>{est}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="campo-glow">
+                  <label className="label-glow" style={styles.label}>Municipio B</label>
+                  <select
+                    className="interactive-input"
+                    style={{ ...styles.input, opacity: !estadoB ? 0.7 : 1 }}
+                    value={munB}
+                    onChange={(e) => setMunB(e.target.value)}
+                    disabled={!estadoB}
+                  >
+                    <option value="">-- Selecciona municipio --</option>
+                    {municipiosListaB.map((munItem, idx) => (
+                      <option key={idx} value={munItem}>{munItem}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="campo-glow">
+              <label className="label-glow" style={styles.label}>Año</label>
+              <input className="interactive-input" style={styles.input} type="number" value={ano} onChange={(e) => setAno(e.target.value)} />
+            </div>
+            <div className="campo-glow">
+              <label className="label-glow" style={styles.label}>Género</label>
+              <select className="interactive-input" style={styles.input} value={sexo} onChange={(e) => setSexo(e.target.value)}>
+                <option value="AMBOS">Ambos</option><option value="HOMBRES">Hombres</option><option value="MUJERES">Mujeres</option>
+              </select>
+            </div>
+            <button className="interactive-btn" type="submit" style={styles.button(cargando, isDarkMode)} disabled={cargando}>
+              <span className="btn-content">
+                {cargando && <span className="spinner" />}
+                {cargando ? 'Comparando...' : 'Contrastar Datos'}
+              </span>
+            </button>
+            {resultados.a !== null && (
+              <div ref={capturaRef} style={{ backgroundColor: isDarkMode ? '#1c1720' : '#fff', padding: '10px', borderRadius: '15px' }}>
+                <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+                  <div className="resultado-glow" style={styles.resultadoCard}>{nombresCongelados.a}: <b>{resultados.a.toLocaleString()}</b></div>
+                  <div className="resultado-glow" style={styles.resultadoCard}>{nombresCongelados.b}: <b>{resultados.b.toLocaleString()}</b></div>
+                </div>
+                <button className="interactive-btn no-capturar" type="button" style={styles.graficaButton} onClick={alternarGraficaComparativa}>{mostrarGrafica ? 'Ocultar Gráfica' : 'Graficar Municipios'}</button>
+                {mostrarGrafica && (
+                  <div className="result-enter" style={{ marginTop: '20px', padding: '10px' }}>
+                    <div style={{ height: '350px', width: '100%' }}>
+                      <ResponsiveContainer>
+                        <BarChart
+                          data={[{ name: nombresCongelados.a, val: resultados.a }, { name: nombresCongelados.b, val: resultados.b }]}
+                          margin={{ top: 30, right: 30, left: 20, bottom: 5 }}
+                        >
+                          <defs>
+                            <linearGradient id="barraTotal" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor={isDarkMode ? PALETTE.wineLight : PALETTE.wine} />
+                              <stop offset="100%" stopColor={PALETTE.wineDeep} />
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDarkMode ? '#333' : '#eee'} />
+                          <XAxis dataKey="name" tick={{fill: isDarkMode ? '#fff' : '#000', fontSize: 12}} />
+                          <YAxis tick={{fill: isDarkMode ? '#fff' : '#000'}} domain={[0, 'auto']} tickFormatter={formatCompacto} />
+                          <Tooltip cursor={{fill: 'transparent'}} content={<ComparativaTooltip />} />
+                          <Bar dataKey="val" fill="url(#barraTotal)" radius={[10, 10, 0, 0]} barSize={80}>
+                            <LabelList dataKey="val" position="top" fill={isDarkMode ? '#fff' : '#333'} formatter={(value) => value.toLocaleString()} />
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div style={{ marginTop: '20px', padding: '15px', borderRadius: '12px', backgroundColor: isDarkMode ? '#26202f' : '#fdf2f4', textAlign: 'center', color: isDarkMode ? '#ccc' : '#666', border: isDarkMode ? '1px solid #3c3245' : '1px solid #e8d8db' }}>
+                      La diferencia poblacional entre ambos municipios es de <b>{Math.abs(resultados.a - resultados.b).toLocaleString()}</b> habitantes.
+                    </div>
+                    <div style={{ marginTop: '18px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                      {cargandoDistribucion && (
+                        <div style={{ fontSize: '13px', color: isDarkMode ? '#b8adc4' : '#8a7176', textAlign: 'center' }}>Cargando distribución por edad...</div>
+                      )}
+                      {distribucionEdadComp.a && (
+                        <div className="result-enter" style={{ padding: '14px', borderRadius: '12px', backgroundColor: isDarkMode ? '#1f1a25' : '#fdf9f6' }}>
+                          <h4 style={{ margin: '0 0 10px 0', fontSize: '13px', color: PALETTE.wine, textAlign: 'left' }}>Distribución por edad — {nombresCongelados.a}</h4>
+                          {renderDistribucionEdad(distribucionEdadComp.a, PALETTE.wine)}
+                        </div>
+                      )}
+                      {distribucionEdadComp.b && (
+                        <div className="result-enter" style={{ padding: '14px', borderRadius: '12px', backgroundColor: isDarkMode ? '#1f1a25' : '#fdf9f6' }}>
+                          <h4 style={{ margin: '0 0 10px 0', fontSize: '13px', color: '#a67c1f', textAlign: 'left' }}>Distribución por edad — {nombresCongelados.b}</h4>
+                          {renderDistribucionEdad(distribucionEdadComp.b, PALETTE.gold)}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+                <button
+                  className="interactive-btn no-capturar"
+                  type="button"
+                  style={{ ...styles.graficaButton, marginTop: '12px' }}
+                  onClick={() => setMostrarTendenciaComp(!mostrarTendenciaComp)}
+                >
+                  {mostrarTendenciaComp ? 'Ocultar Tendencias' : 'Ver Tendencias'}
+                </button>
+                {mostrarTendenciaComp && (
+                  <div className="result-enter" style={{ marginTop: '16px', textAlign: 'left' }}>
+                    <div className="no-capturar" style={{ display: 'flex', gap: '10px' }}>
+                      <div className="campo-glow" style={{ flex: 1 }}>
+                        <label className="label-glow" style={styles.label}>Periodo Inicio</label>
+                        <input className="interactive-input" style={styles.input} type="number" value={rangoInicioComp} onChange={(e) => setRangoInicioComp(e.target.value)} />
+                      </div>
+                      <div className="campo-glow" style={{ flex: 1 }}>
+                        <label className="label-glow" style={styles.label}>Periodo Fin</label>
+                        <input className="interactive-input" style={styles.input} type="number" value={rangoFinComp} onChange={(e) => setRangoFinComp(e.target.value)} />
+                      </div>
+                    </div>
+                    <button className="interactive-btn no-capturar" type="button" style={styles.button(cargandoTendenciaComp, isDarkMode)} onClick={consultarTendenciaComparativa} disabled={cargandoTendenciaComp}>
+                      <span className="btn-content">
+                        {cargandoTendenciaComp && <span className="spinner" />}
+                        {cargandoTendenciaComp ? 'Calculando tendencias...' : `Generar Tendencias (${rangoInicioComp}–${rangoFinComp})`}
+                      </span>
+                    </button>
+                    {datosTendenciaComp && (
+                      <div className="result-enter" style={styles.proCard}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                          <span style={{ fontSize: '13px', fontWeight: 800, color: isDarkMode ? PALETTE.goldSoft : PALETTE.wine, letterSpacing: '0.2px' }}>Tendencia Poblacional Comparada</span>
+                          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                            <span style={styles.legendChip(PALETTE.wine, isDarkMode)}>● {nombresTendenciaComp.a}</span>
+                            <span style={styles.legendChip(PALETTE.gold, isDarkMode)}>● {nombresTendenciaComp.b}</span>
+                          </div>
+                        </div>
+                        <div style={{ height: '260px', width: '100%' }}>
+                          <ResponsiveContainer width="100%" height="100%">
+                            <ComposedChart data={datosTendenciaComp} margin={{ top: 10, right: 25, left: 0, bottom: 5 }}>
+                              <defs>
+                                <linearGradient id="gradA" x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="5%" stopColor={PALETTE.wine} stopOpacity={0.35} />
+                                  <stop offset="95%" stopColor={PALETTE.wine} stopOpacity={0} />
+                                </linearGradient>
+                                <linearGradient id="gradB" x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="5%" stopColor={PALETTE.gold} stopOpacity={0.35} />
+                                  <stop offset="95%" stopColor={PALETTE.gold} stopOpacity={0} />
+                                </linearGradient>
+                              </defs>
+                              <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? '#3c3245' : '#eee'} />
+                              <XAxis dataKey="ano" stroke={isDarkMode ? '#fff' : '#000'} tick={{ fontSize: 12 }} />
+                              <YAxis stroke={isDarkMode ? '#fff' : '#000'} tickFormatter={formatCompacto} width={48} tick={{ fontSize: 12 }} domain={['auto', 'auto']} />
+                              <Tooltip content={<TendenciaComparativaTooltip />} />
+                              <Area type="monotone" dataKey="a" stroke="none" fill="url(#gradA)" />
+                              <Area type="monotone" dataKey="b" stroke="none" fill="url(#gradB)" />
+                              <Line type="monotone" dataKey="a" name={nombresTendenciaComp.a} stroke={PALETTE.wine} strokeWidth={3} dot={{ r: 3.5 }} activeDot={{ r: 6 }} />
+                              <Line type="monotone" dataKey="b" name={nombresTendenciaComp.b} stroke={PALETTE.gold} strokeWidth={3} dot={{ r: 3.5 }} activeDot={{ r: 6 }} />
+                            </ComposedChart>
+                          </ResponsiveContainer>
+                        </div>
+                        <div style={styles.narrativeBox}>
+                          <h4 style={{ margin: '0 0 8px 0', color: isDarkMode ? PALETTE.goldSoft : PALETTE.wine }}></h4>
+                          {generarAnalisisTendenciaComparativa(datosTendenciaComp, nombresTendenciaComp.a, nombresTendenciaComp.b)}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+                <button className="interactive-btn no-capturar" type="button" style={styles.exportButton} onClick={exportarImagen}>Exportar a Imagen</button>
+                <button className="interactive-btn no-capturar" type="button" style={styles.exportButtonPdf} onClick={exportarPDF}>Exportar a PDF</button>
+              </div>
+            )}
+          </form>
         )}
       </div>
     </div>
